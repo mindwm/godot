@@ -56,6 +56,8 @@
 #include "audio_server.h"
 #include "camera/camera_feed.h"
 #include "camera_server.h"
+#include "capture_server.h"
+#include "capture/capture_feed.h"
 #include "debugger/servers_debugger.h"
 #include "display/native_menu.h"
 #include "display_server.h"
@@ -168,6 +170,7 @@ void register_server_types() {
 	GDREGISTER_CLASS(NativeMenu);
 
 	GDREGISTER_CLASS(CameraServer);
+	GDREGISTER_CLASS(CaptureServer);
 
 	GDREGISTER_ABSTRACT_CLASS(RenderingDevice);
 
@@ -258,6 +261,7 @@ void register_server_types() {
 	GDREGISTER_CLASS(UniformSetCacheRD);
 
 	GDREGISTER_CLASS(CameraFeed);
+	GDREGISTER_CLASS(CaptureFeed);
 
 	GDREGISTER_VIRTUAL_CLASS(MovieWriter);
 
@@ -366,6 +370,7 @@ void register_server_singletons() {
 
 	Engine::get_singleton()->add_singleton(Engine::Singleton("AudioServer", AudioServer::get_singleton(), "AudioServer"));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("CameraServer", CameraServer::get_singleton(), "CameraServer"));
+	Engine::get_singleton()->add_singleton(Engine::Singleton("CaptureServer", CaptureServer::get_singleton(), "CaptureServer"));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("DisplayServer", DisplayServer::get_singleton(), "DisplayServer"));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("NativeMenu", NativeMenu::get_singleton(), "NativeMenu"));
 	Engine::get_singleton()->add_singleton(Engine::Singleton("NavigationServer2D", NavigationServer2D::get_singleton(), "NavigationServer2D"));

@@ -6,6 +6,7 @@ env.servers_sources = []
 
 env.add_source_files(env.servers_sources, "audio_server.cpp")
 env.add_source_files(env.servers_sources, "camera_server.cpp")
+env.add_source_files(env.servers_sources, "capture_server.cpp")
 env.add_source_files(env.servers_sources, "display_server.cpp")
 env.add_source_files(env.servers_sources, "navigation_server_2d.cpp")
 env.add_source_files(env.servers_sources, "navigation_server_3d.cpp")
@@ -17,6 +18,7 @@ env.add_source_files(env.servers_sources, "text_server.cpp")
 
 SConscript("audio/SCsub")
 SConscript("camera/SCsub")
+SConscript("capture/SCsub")
 SConscript("debugger/SCsub")
 SConscript("display/SCsub")
 SConscript("extensions/SCsub")

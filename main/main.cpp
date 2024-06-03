@@ -65,6 +65,7 @@
 #include "scene/theme/theme_db.h"
 #include "servers/audio_server.h"
 #include "servers/camera_server.h"
+#include "servers/capture_server.h"
 #include "servers/display_server.h"
 #include "servers/movie_writer/movie_writer.h"
 #include "servers/movie_writer/movie_writer_mjpeg.h"
@@ -154,6 +155,7 @@ static SteamTracker *steam_tracker = nullptr;
 // Initialized in setup2()
 static AudioServer *audio_server = nullptr;
 static CameraServer *camera_server = nullptr;
+static CaptureServer *capture_server = nullptr;
 static DisplayServer *display_server = nullptr;
 static RenderingServer *rendering_server = nullptr;
 static TextServerManager *tsman = nullptr;
@@ -3161,6 +3163,7 @@ Error Main::setup2() {
 	OS::get_singleton()->benchmark_begin_measure("Startup", "Finalize Setup");
 
 	camera_server = CameraServer::create();
+	capture_server = CaptureServer::create();
 
 	MAIN_PRINT("Main: Load Physics");
 
@@ -4312,6 +4315,10 @@ void Main::cleanup(bool p_force) {
 
 	if (camera_server) {
 		memdelete(camera_server);
+	}
+
+	if (capture_server) {
+		memdelete(capture_server);
 	}
 
 	OS::get_singleton()->finalize();
