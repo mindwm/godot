@@ -53,10 +53,7 @@ class CaptureServer : public Object {
 public:
 	enum FeedImage {
 		FEED_RGBA_IMAGE = 0,
-		FEED_YCBCR_IMAGE = 0,
-		FEED_Y_IMAGE = 0,
-		FEED_CBCR_IMAGE = 1,
-		FEED_IMAGES = 2
+		FEED_IMAGES = 1
 	};
 
 	typedef CaptureServer *(*CreateFunc)();
@@ -75,6 +72,7 @@ protected:
 	static CaptureServer *_create_builtin() {
 		return memnew(T);
 	}
+
 
 public:
 	static CaptureServer *get_singleton();
@@ -98,6 +96,9 @@ public:
 	// Add and remove feeds.
 	void add_feed(const Ref<CaptureFeed> &p_feed);
 	void remove_feed(const Ref<CaptureFeed> &p_feed);
+
+	// Force feed update
+	virtual void update_feed(const Ref<CaptureFeed> &p_feed) {print_line("from virtual"); };
 
 	// Get our feeds.
 	Ref<CaptureFeed> get_feed(int p_index);

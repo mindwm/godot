@@ -130,22 +130,96 @@ void xcomp_gather_atoms(xcb_connection_t *conn)
 }
 
 
-class CaptureFeedWindows : public CaptureFeed {
+struct xcompcap {
+	const char *windowName;
+	xcb_window_t win;
+	int crop_top;
+	int crop_left;
+	int crop_right;
+	int crop_bot;
+	bool include_border;
+	bool exclude_alpha;
+
+	float window_check_time;
+	bool window_changed;
+	bool window_hooked;
+
+	uint32_t width;
+	uint32_t height;
+	uint32_t border;
+
+	Pixmap pixmap;
+};
+
+void xcomp_create_pixmap(xcb_connection_t *conn, struct xcompcap *s)
+{
+	if (!s->win)
+		return;
+
+	xcb_generic_error_t *err = NULL;
+	xcb_get_geometry_cookie_t geom_cookie = xcb_get_geometry(conn, s->win);
+	xcb_get_geometry_reply_t *geom =
+		xcb_get_geometry_reply(conn, geom_cookie, &err);
+	if (err != NULL) {
+		return;
+	}
+
+	s->border = s->include_border ? geom->border_width : 0;
+	s->width = geom->width;
+	s->height = geom->height;
+	// We don't have an alpha channel, but may have garbage in the texture.
+	int32_t depth = geom->depth;
+	if (depth != 32) {
+		s->exclude_alpha = true;
+	}
+	free(geom);
+
+	uint32_t vert_borders = s->crop_top + s->crop_bot + 2 * s->border;
+	uint32_t hori_borders = s->crop_left + s->crop_right + 2 * s->border;
+	// Skip 0 sized textures.
+	if (vert_borders > s->height || hori_borders > s->width)
+		return;
+
+	s->pixmap = xcb_generate_id(conn);
+	xcb_void_cookie_t name_cookie =
+		xcb_composite_name_window_pixmap_checked(conn, s->win,
+							 s->pixmap);
+	err = NULL;
+	if ((err = xcb_request_check(conn, name_cookie)) != NULL) {
+		ERR_PRINT("xcb_composite_name_window_pixmap failed");
+		s->pixmap = 0;
+		return;
+	}
+
+	return;
+//	XErrorHandler prev = XSetErrorHandler(silence_x11_errors);
+//	TODO: implement copy pixmap to texture
+	/*
+	s->gltex = gs_texture_create_from_pixmap(s->width, s->height,
+						 GS_BGRA_UNORM, GL_TEXTURE_2D,
+						 (void *)s->pixmap);
+						 */
+//	XSetErrorHandler(prev);
+}
+
+
+class CaptureFeedWindow : public CaptureFeed {
 private:
 protected:
 public:
-	CaptureFeedWindows();
-	virtual ~CaptureFeedWindows();
+	struct xcompcap params;
+	CaptureFeedWindow();
+	virtual ~CaptureFeedWindow();
 
 	bool activate_feed();
 	void deactivate_feed();
 };
 
-CaptureFeedWindows::CaptureFeedWindows() {
+CaptureFeedWindow::CaptureFeedWindow() {
 	///@TODO implement this, should store information about our available camera
 }
 
-CaptureFeedWindows::~CaptureFeedWindows() {
+CaptureFeedWindow::~CaptureFeedWindow() {
 	// make sure we stop recording if we are!
 	if (is_active()) {
 		deactivate_feed();
@@ -154,17 +228,63 @@ CaptureFeedWindows::~CaptureFeedWindows() {
 	///@TODO free up anything used by this
 };
 
-bool CaptureFeedWindows::activate_feed() {
+bool CaptureFeedWindow::activate_feed() {
 	///@TODO this should activate our camera and start the process of capturing frames
-
+  print_line("activate_feed");
 	return true;
 };
 
 ///@TODO we should probably have a callback method here that is being called by the
 // camera API which provides frames and call back into the CameraServer to update our texture
 
-void CaptureFeedWindows::deactivate_feed() {
+void CaptureFeedWindow::deactivate_feed() {
 	///@TODO this should deactivate our camera and stop the process of capturing frames
+}
+
+RID CaptureX11::feed_texture(int p_id, CaptureServer::FeedImage p_texture) {
+//	print_line("feed_texture from xcomposite");
+	Ref<CaptureFeedWindow> feed = get_feed_by_id(p_id);
+  struct xcompcap p = feed->params;
+	xcomp_create_pixmap(conn, &p);
+//	print_line(vformat("p.win: %d, pixmap_width: %d, pixmap: %d", p.win, p.width, p.pixmap));
+	Ref<Image> img;
+  img.instantiate();
+	Vector<uint8_t> img_data;
+  img_data.resize(p.width * p.height * 4);
+	uint8_t *w = img_data.ptrw();
+	/*
+	xcb_copy_area(conn,
+		    (void *)p.pixmap, p.win, w,
+		    0, 0, 0, 0,
+		    p.width, p.height);
+				*/
+	//memcpy(w, (void *)p.pixmap, p.width * p.height);
+	// create a pixmap
+  xcb_pixmap_t win_pixmap = xcb_generate_id(conn);
+  xcb_composite_name_window_pixmap(conn, p.win, win_pixmap);
+
+  // get the image
+	xcb_generic_error_t *err = NULL;
+  xcb_get_image_cookie_t gi_cookie = xcb_get_image(conn, XCB_IMAGE_FORMAT_Z_PIXMAP, p.pixmap, 0, 0, p.width, p.height, (uint32_t)(~0UL));
+  xcb_get_image_reply_t *gi_reply = xcb_get_image_reply(conn, gi_cookie, &err);
+  if (gi_reply) {
+      int data_len = xcb_get_image_data_length(gi_reply);
+//      print_line(vformat("data_len = %d\n", data_len));
+//      print_line(vformat("depth = %d\n", gi_reply->depth));
+//      fprintf(stderr, "visual = %u\n", gi_reply->visual);
+//      fprintf(stderr, "depth = %u\n", gi_reply->depth);
+//      fprintf(stderr, "size = %dx%d\n", win_w, win_h);
+      uint8_t *data = xcb_get_image_data(gi_reply);
+//      fwrite(data, data_len, 1, w);
+      memcpy(w, data, p.width * p.height * 4);
+      free(gi_reply);
+  }
+
+//	memset(w, 0, p.width * p.height);
+	//img->set_data(p.width, p.height, 0, Image::FORMAT_R8, img_data);
+	img->set_data(p.width, p.height, 0, Image::FORMAT_RGBA8, img_data);
+	feed->set_RGB_img(img);
+	return CaptureServer::feed_texture(p_id, p_texture);
 }
 
 //////////////////////////////////////////////////////////////////////////
@@ -187,19 +307,32 @@ void CaptureX11::add_active_windows() {
   		uint32_t len = xcb_get_property_value_length(cl_list) /
   			       sizeof(xcb_window_t);
   		for (uint32_t i = 0; i < len; i++){
-      	Ref<CaptureFeed> newfeed;
+      	Ref<CaptureFeedWindow> newfeed;
       	newfeed.instantiate();
 				xcb_window_t cwin = (((xcb_window_t *)xcb_get_property_value( cl_list))[i]);
 				xcb_get_property_reply_t *name = xcomp_property_sync(conn, cwin, ATOM__NET_WM_NAME);
 				if (name) {
 					char buf[1024];
 					const char *data = (const char *)xcb_get_property_value(name);
-					strcpy(buf, data);
-					WARN_PRINT(vformat("%s", buf));
-      		newfeed->set_name(buf);
+					strncpy(buf, data, sizeof(buf) - 1);
+      		newfeed->set_wm_name(buf);
+					newfeed->params.win = cwin;
+					free(name);
 				} else {
-					ERR_PRINT(vformat("cannot get name for %d", cwin));
-      		newfeed->set_name(vformat("noname_%d", i));
+					ERR_PRINT(vformat("cannot get WM_NAME for %d", cwin));
+      		newfeed->set_wm_name(vformat("noname_%d", i));
+				}
+
+				xcb_get_property_reply_t *cls = xcomp_property_sync(conn, cwin, ATOM_WM_CLASS);
+				if (cls) {
+					char buf[1024];
+					const char *data = (const char *)xcb_get_property_value(cls);
+					strncpy(buf, data, sizeof(buf) - 1);
+      		newfeed->set_wm_class(buf);
+					free(cls);
+				} else {
+					ERR_PRINT(vformat("cannot get WM_CLASS for %d", cwin));
+      		newfeed->set_wm_class(vformat("noclass_%d", i));
 				}
       	add_feed(newfeed);
   		}
@@ -241,3 +374,7 @@ CaptureX11::CaptureX11() {
 
 	// need to add something that will react to devices being connected/removed...
 };
+
+void CaptureX11::update_feed(const Ref<CaptureFeed> &p_feed) {
+  feed_texture(p_feed->get_id(), FEED_RGBA_IMAGE);
+}

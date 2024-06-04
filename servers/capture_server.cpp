@@ -46,13 +46,12 @@ void CaptureServer::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("add_feed", "feed"), &CaptureServer::add_feed);
 	ClassDB::bind_method(D_METHOD("remove_feed", "feed"), &CaptureServer::remove_feed);
 
+	ClassDB::bind_method(D_METHOD("update", "feed"), &CaptureServer::update_feed);
+
 	ADD_SIGNAL(MethodInfo("capture_feed_added", PropertyInfo(Variant::INT, "id")));
 	ADD_SIGNAL(MethodInfo("capture_feed_removed", PropertyInfo(Variant::INT, "id")));
 
 	BIND_ENUM_CONSTANT(FEED_RGBA_IMAGE);
-	BIND_ENUM_CONSTANT(FEED_YCBCR_IMAGE);
-	BIND_ENUM_CONSTANT(FEED_Y_IMAGE);
-	BIND_ENUM_CONSTANT(FEED_CBCR_IMAGE);
 };
 
 CaptureServer *CaptureServer::singleton = nullptr;
@@ -99,13 +98,17 @@ Ref<CaptureFeed> CaptureServer::get_feed_by_id(int p_id) {
 	}
 };
 
+//void CaptureServer::update_feed(const Ref<CaptureFeed> &p_feed) {
+//	feed_texture(p_feed->get_id(), FEED_RGBA_IMAGE);
+//}
+
 void CaptureServer::add_feed(const Ref<CaptureFeed> &p_feed) {
 	ERR_FAIL_COND(p_feed.is_null());
 
 	// add our feed
 	feeds.push_back(p_feed);
 
-	print_verbose("CaptureServer: Registered capture " + p_feed->get_name() + " with ID " + itos(p_feed->get_id()) + " and position " + itos(p_feed->get_position()) + " at index " + itos(feeds.size() - 1));
+	print_verbose("CaptureServer: Registered capture " + p_feed->get_wm_name() + " with ID " + itos(p_feed->get_id()) + " and position " + itos(p_feed->get_position()) + " at index " + itos(feeds.size() - 1));
 
 	// let whomever is interested know
 	emit_signal(SNAME("capture_feed_added"), p_feed->get_id());
@@ -116,7 +119,7 @@ void CaptureServer::remove_feed(const Ref<CaptureFeed> &p_feed) {
 		if (feeds[i] == p_feed) {
 			int feed_id = p_feed->get_id();
 
-			print_verbose("CaptureServer: Removed capture " + p_feed->get_name() + " with ID " + itos(feed_id) + " and position " + itos(p_feed->get_position()));
+			print_verbose("CaptureServer: Removed capture " + p_feed->get_wm_name() + " with ID " + itos(feed_id) + " and position " + itos(p_feed->get_position()));
 
 			// remove it from our array, if this results in our feed being unreferenced it will be destroyed
 			feeds.remove_at(i);
@@ -152,6 +155,7 @@ TypedArray<CaptureFeed> CaptureServer::get_feeds() {
 
 RID CaptureServer::feed_texture(int p_id, CaptureServer::FeedImage p_texture) {
 	int index = get_feed_index(p_id);
+//	print_line("feed_texture from CaptureServer");
 	ERR_FAIL_COND_V(index == -1, RID());
 
 	Ref<CaptureFeed> feed = get_feed(index);

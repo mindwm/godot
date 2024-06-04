@@ -41,6 +41,7 @@
 #include "scene/resources/curve.h"
 #include "scene/resources/gradient.h"
 #include "servers/camera_server.h"
+#include "servers/capture_server.h"
 #include "servers/rendering_server.h"
 
 class Texture : public Resource {

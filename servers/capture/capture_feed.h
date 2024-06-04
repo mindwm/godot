@@ -48,8 +48,6 @@ public:
 	enum FeedDataType {
 		FEED_NOIMAGE, // we don't have an image yet
 		FEED_RGB, // our texture will contain a normal RGB texture that can be used directly
-		FEED_YCBCR, // our texture will contain a YCbCr texture that needs to be converted to RGB before output
-		FEED_YCBCR_SEP // our camera is split into two textures, first plane contains Y data, second plane contains CbCr data
 	};
 
 	enum FeedPosition {
@@ -64,7 +62,8 @@ private:
 	int base_height;
 
 protected:
-	String name; // name of our camera feed
+	String wm_class; // WM_CLASS
+	String wm_name; // WM_NAME
 	FeedDataType datatype; // type of texture data stored
 	FeedPosition position; // position of camera on the device
 	Transform2D transform; // display transform
@@ -79,8 +78,10 @@ public:
 	bool is_active() const;
 	void set_active(bool p_is_active);
 
-	String get_name() const;
-	void set_name(String p_name);
+	String get_wm_class() const;
+	String get_wm_name() const;
+	void set_wm_class(String p_class);
+	void set_wm_name(String p_name);
 
 	int get_base_width() const;
 	int get_base_height() const;
@@ -94,13 +95,11 @@ public:
 	RID get_texture(CaptureServer::FeedImage p_which);
 
 	CaptureFeed();
-	CaptureFeed(String p_name, FeedPosition p_position = CaptureFeed::FEED_UNSPECIFIED);
+	CaptureFeed(String p_wm_name, String p_wm_class, FeedPosition p_position = CaptureFeed::FEED_UNSPECIFIED);
 	virtual ~CaptureFeed();
 
 	FeedDataType get_datatype() const;
 	void set_RGB_img(const Ref<Image> &p_rgb_img);
-	void set_YCbCr_img(const Ref<Image> &p_ycbcr_img);
-	void set_YCbCr_imgs(const Ref<Image> &p_y_img, const Ref<Image> &p_cbcr_img);
 
 	virtual bool activate_feed();
 	virtual void deactivate_feed();

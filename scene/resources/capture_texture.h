@@ -1,5 +1,5 @@
 /**************************************************************************/
-/*  camera_win.h                                                          */
+/*  capture_texture.h                                                     */
 /**************************************************************************/
 /*                         This file is part of:                          */
 /*                             GODOT ENGINE                               */
@@ -28,26 +28,41 @@
 /* SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                 */
 /**************************************************************************/
 
-#ifndef CAPTURE_X11_H
-#define CAPTURE_X11_H
+#ifndef CAPTURE_TEXTURE_H
+#define CAPTURE_TEXTURE_H
 
-#include <X11/Xlib.h>
-#include <xcb/xcb.h>
-#include "servers/capture/capture_feed.h"
-#include "servers/capture_server.h"
+#include "scene/resources/texture.h"
 
-class CaptureX11 : public CaptureServer {
+class CaptureTexture : public Texture2D {
+	GDCLASS(CaptureTexture, Texture2D);
+
 private:
-	Display *disp = NULL;
-  xcb_connection_t *conn = NULL;
-	void add_active_windows();
-	void xcomposite_load();
-	void update_feed(const Ref<CaptureFeed> &p_feed);
+	mutable RID _texture;
+	int capture_feed_id = 0;
+	CaptureServer::FeedImage which_feed = CaptureServer::FEED_RGBA_IMAGE;
+
+protected:
+	static void _bind_methods();
 
 public:
-	RID feed_texture(int p_id, CaptureServer::FeedImage p_texture);
-	CaptureX11();
-	~CaptureX11() {}
+	virtual int get_width() const override;
+	virtual int get_height() const override;
+	virtual RID get_rid() const override;
+	virtual bool has_alpha() const override;
+
+	virtual Ref<Image> get_image() const override;
+
+	void set_capture_feed_id(int p_new_id);
+	int get_capture_feed_id() const;
+
+	void set_which_feed(CaptureServer::FeedImage p_which);
+	CaptureServer::FeedImage get_which_feed() const;
+
+	void set_capture_active(bool p_active);
+	bool get_capture_active() const;
+
+	CaptureTexture();
+	~CaptureTexture();
 };
 
-#endif // CAPTURE_X11_H
+#endif // CAPTURE_TEXTURE_H
