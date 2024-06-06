@@ -33,6 +33,7 @@
 #include <X11/Xlib-xcb.h>
 #include <xcb/xcb.h>
 #include <xcb/composite.h>
+#include <xcb/xcb_image.h>
 #include <core/error/error_macros.h>
 #include "capture_x11.h"
 
@@ -151,58 +152,6 @@ struct xcompcap {
 	Pixmap pixmap;
 };
 
-void xcomp_create_pixmap(xcb_connection_t *conn, struct xcompcap *s)
-{
-	if (!s->win)
-		return;
-
-	xcb_generic_error_t *err = NULL;
-	xcb_get_geometry_cookie_t geom_cookie = xcb_get_geometry(conn, s->win);
-	xcb_get_geometry_reply_t *geom =
-		xcb_get_geometry_reply(conn, geom_cookie, &err);
-	if (err != NULL) {
-		return;
-	}
-
-	s->border = s->include_border ? geom->border_width : 0;
-	s->width = geom->width;
-	s->height = geom->height;
-	// We don't have an alpha channel, but may have garbage in the texture.
-	int32_t depth = geom->depth;
-	if (depth != 32) {
-		s->exclude_alpha = true;
-	}
-	free(geom);
-
-	uint32_t vert_borders = s->crop_top + s->crop_bot + 2 * s->border;
-	uint32_t hori_borders = s->crop_left + s->crop_right + 2 * s->border;
-	// Skip 0 sized textures.
-	if (vert_borders > s->height || hori_borders > s->width)
-		return;
-
-	s->pixmap = xcb_generate_id(conn);
-	xcb_void_cookie_t name_cookie =
-		xcb_composite_name_window_pixmap_checked(conn, s->win,
-							 s->pixmap);
-	err = NULL;
-	if ((err = xcb_request_check(conn, name_cookie)) != NULL) {
-		ERR_PRINT("xcb_composite_name_window_pixmap failed");
-		s->pixmap = 0;
-		return;
-	}
-
-	return;
-//	XErrorHandler prev = XSetErrorHandler(silence_x11_errors);
-//	TODO: implement copy pixmap to texture
-	/*
-	s->gltex = gs_texture_create_from_pixmap(s->width, s->height,
-						 GS_BGRA_UNORM, GL_TEXTURE_2D,
-						 (void *)s->pixmap);
-						 */
-//	XSetErrorHandler(prev);
-}
-
-
 class CaptureFeedWindow : public CaptureFeed {
 private:
 protected:
@@ -244,29 +193,35 @@ void CaptureFeedWindow::deactivate_feed() {
 RID CaptureX11::feed_texture(int p_id, CaptureServer::FeedImage p_texture) {
 	Ref<CaptureFeedWindow> feed = get_feed_by_id(p_id);
   struct xcompcap p = feed->params;
-	xcomp_create_pixmap(conn, &p);
+
+	xcb_generic_error_t *err = NULL;
+	xcb_get_geometry_cookie_t geom_cookie = xcb_get_geometry(conn, p.win);
+	xcb_get_geometry_reply_t *geom =
+	xcb_get_geometry_reply(conn, geom_cookie, &err);
+	if (err != NULL) {
+		return CaptureServer::feed_texture(p_id, p_texture);
+	}
+
+	feed->params.border = p.include_border ? geom->border_width : 0;
+	feed->params.width = geom->width;
+	feed->params.height = geom->height;
+
 	Ref<Image> img;
   img.instantiate();
 	Vector<uint8_t> img_data;
   img_data.resize(p.width * p.height * 4);
 	uint8_t *w = img_data.ptrw();
-	// create a pixmap
-  xcb_pixmap_t win_pixmap = xcb_generate_id(conn);
-  xcb_composite_name_window_pixmap(conn, p.win, win_pixmap);
+
+	xcb_composite_redirect_window(conn, p.win, XCB_COMPOSITE_REDIRECT_AUTOMATIC);
 
   // get the image
-	xcb_generic_error_t *err = NULL;
-  xcb_get_image_cookie_t gi_cookie = xcb_get_image(conn, XCB_IMAGE_FORMAT_Z_PIXMAP, p.pixmap, 0, 0, p.width, p.height, (uint32_t)(~0UL));
-  xcb_get_image_reply_t *gi_reply = xcb_get_image_reply(conn, gi_cookie, &err);
-  if (gi_reply) {
-      int data_len = xcb_get_image_data_length(gi_reply);
-      uint8_t *data = xcb_get_image_data(gi_reply);
-      memcpy(w, data, p.width * p.height * 4);
-      free(gi_reply);
-  }
+	xcb_image_t *image = xcb_image_get(conn, p.win, 0, 0, p.width, p.height, 0xFFFFFFFF, XCB_IMAGE_FORMAT_Z_PIXMAP);
 
-	img->set_data(p.width, p.height, 0, Image::FORMAT_RGBA8, img_data);
-	feed->set_RGB_img(img);
+	if (image){
+    memcpy(w, image->data, p.width * p.height * 4);
+		img->set_data(p.width, p.height, 0, Image::FORMAT_RGBA8, img_data);
+		feed->set_RGB_img(img);
+	}
 	return CaptureServer::feed_texture(p_id, p_texture);
 }
 
@@ -349,6 +304,10 @@ void CaptureX11::xcomposite_load() {
 	xcb_screen_t *screen_default =
 		xcb_get_screen(conn, DefaultScreen(disp));
 	ERR_FAIL_COND_MSG(!screen_default || !xcomp_check_ewmh(conn, screen_default->root), "window manager does not support Extended Window Manager Hints (EWMH).\nXComposite capture disabled.");
+
+}
+
+void CaptureX11::refresh_windows_list() {
 
 }
 

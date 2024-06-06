@@ -42,6 +42,7 @@ private:
   xcb_connection_t *conn = NULL;
 	void add_active_windows();
 	void xcomposite_load();
+	void refresh_windows_list();
 	void update_feed(const Ref<CaptureFeed> &p_feed);
 
 public:
