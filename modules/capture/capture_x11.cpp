@@ -242,23 +242,14 @@ void CaptureFeedWindow::deactivate_feed() {
 }
 
 RID CaptureX11::feed_texture(int p_id, CaptureServer::FeedImage p_texture) {
-//	print_line("feed_texture from xcomposite");
 	Ref<CaptureFeedWindow> feed = get_feed_by_id(p_id);
   struct xcompcap p = feed->params;
 	xcomp_create_pixmap(conn, &p);
-//	print_line(vformat("p.win: %d, pixmap_width: %d, pixmap: %d", p.win, p.width, p.pixmap));
 	Ref<Image> img;
   img.instantiate();
 	Vector<uint8_t> img_data;
   img_data.resize(p.width * p.height * 4);
 	uint8_t *w = img_data.ptrw();
-	/*
-	xcb_copy_area(conn,
-		    (void *)p.pixmap, p.win, w,
-		    0, 0, 0, 0,
-		    p.width, p.height);
-				*/
-	//memcpy(w, (void *)p.pixmap, p.width * p.height);
 	// create a pixmap
   xcb_pixmap_t win_pixmap = xcb_generate_id(conn);
   xcb_composite_name_window_pixmap(conn, p.win, win_pixmap);
@@ -269,19 +260,11 @@ RID CaptureX11::feed_texture(int p_id, CaptureServer::FeedImage p_texture) {
   xcb_get_image_reply_t *gi_reply = xcb_get_image_reply(conn, gi_cookie, &err);
   if (gi_reply) {
       int data_len = xcb_get_image_data_length(gi_reply);
-//      print_line(vformat("data_len = %d\n", data_len));
-//      print_line(vformat("depth = %d\n", gi_reply->depth));
-//      fprintf(stderr, "visual = %u\n", gi_reply->visual);
-//      fprintf(stderr, "depth = %u\n", gi_reply->depth);
-//      fprintf(stderr, "size = %dx%d\n", win_w, win_h);
       uint8_t *data = xcb_get_image_data(gi_reply);
-//      fwrite(data, data_len, 1, w);
       memcpy(w, data, p.width * p.height * 4);
       free(gi_reply);
   }
 
-//	memset(w, 0, p.width * p.height);
-	//img->set_data(p.width, p.height, 0, Image::FORMAT_R8, img_data);
 	img->set_data(p.width, p.height, 0, Image::FORMAT_RGBA8, img_data);
 	feed->set_RGB_img(img);
 	return CaptureServer::feed_texture(p_id, p_texture);
@@ -312,10 +295,11 @@ void CaptureX11::add_active_windows() {
 				xcb_window_t cwin = (((xcb_window_t *)xcb_get_property_value( cl_list))[i]);
 				xcb_get_property_reply_t *name = xcomp_property_sync(conn, cwin, ATOM__NET_WM_NAME);
 				if (name) {
-					char buf[1024];
 					const char *data = (const char *)xcb_get_property_value(name);
-					strncpy(buf, data, sizeof(buf) - 1);
-      		newfeed->set_wm_name(buf);
+					String text;
+					text.parse_utf8((const char *)data, 1024);
+					print_line(vformat("buf: %s", text));
+      		newfeed->set_wm_name(text);
 					newfeed->params.win = cwin;
 					free(name);
 				} else {
