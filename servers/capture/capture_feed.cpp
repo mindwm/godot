@@ -47,8 +47,9 @@ void CaptureFeed::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_wm_name"), &CaptureFeed::get_wm_name);
 	ClassDB::bind_method(D_METHOD("_set_wm_name", "wm_name"), &CaptureFeed::set_wm_name);
 
+	ClassDB::bind_method(D_METHOD("get_geom"), &CaptureFeed::get_geom);
+
 	ClassDB::bind_method(D_METHOD("get_position"), &CaptureFeed::get_position);
-	ClassDB::bind_method(D_METHOD("_set_position", "position"), &CaptureFeed::set_position);
 
 	// Note, for transform some feeds may override what the user sets (such as ARKit)
 	ClassDB::bind_method(D_METHOD("get_transform"), &CaptureFeed::get_transform);
@@ -64,10 +65,6 @@ void CaptureFeed::_bind_methods() {
 
 	BIND_ENUM_CONSTANT(FEED_NOIMAGE);
 	BIND_ENUM_CONSTANT(FEED_RGB);
-
-	BIND_ENUM_CONSTANT(FEED_UNSPECIFIED);
-	BIND_ENUM_CONSTANT(FEED_FRONT);
-	BIND_ENUM_CONSTANT(FEED_BACK);
 }
 
 int CaptureFeed::get_id() const {
@@ -111,6 +108,14 @@ void CaptureFeed::set_wm_name(String p_wm_name) {
 	wm_name = p_wm_name;
 }
 
+void CaptureFeed::set_geom(Rect2i g) {
+	geometry = g;
+}
+
+Rect2i CaptureFeed::get_geom() const {
+	return geometry;
+}
+
 int CaptureFeed::get_base_width() const {
 	return base_width;
 }
@@ -123,12 +128,12 @@ CaptureFeed::FeedDataType CaptureFeed::get_datatype() const {
 	return datatype;
 }
 
-CaptureFeed::FeedPosition CaptureFeed::get_position() const {
+Vector2i CaptureFeed::get_position() const {
 	return position;
 }
 
-void CaptureFeed::set_position(CaptureFeed::FeedPosition p_position) {
-	position = p_position;
+void CaptureFeed::set_position(Vector2i pos) {
+	position = pos;
 }
 
 Transform2D CaptureFeed::get_transform() const {
@@ -153,12 +158,11 @@ CaptureFeed::CaptureFeed() {
 	wm_name = "???";
 	active = false;
 	datatype = CaptureFeed::FEED_RGB;
-	position = CaptureFeed::FEED_UNSPECIFIED;
 	transform = Transform2D(1.0, 0.0, 0.0, -1.0, 0.0, 1.0);
 	texture[CaptureServer::FEED_RGBA_IMAGE] = RenderingServer::get_singleton()->texture_2d_placeholder_create();
 }
 
-CaptureFeed::CaptureFeed(String p_wm_name, String p_wm_class, FeedPosition p_position) {
+CaptureFeed::CaptureFeed(String p_wm_name, String p_wm_class) {
 	// initialize our feed
 	id = CaptureServer::get_singleton()->get_free_id();
 	base_width = 0;
@@ -167,7 +171,6 @@ CaptureFeed::CaptureFeed(String p_wm_name, String p_wm_class, FeedPosition p_pos
 	wm_name = p_wm_name;
 	active = false;
 	datatype = CaptureFeed::FEED_NOIMAGE;
-	position = p_position;
 	transform = Transform2D(1.0, 0.0, 0.0, -1.0, 0.0, 1.0);
 	texture[CaptureServer::FEED_RGBA_IMAGE] = RenderingServer::get_singleton()->texture_2d_placeholder_create();
 }

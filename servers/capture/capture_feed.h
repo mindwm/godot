@@ -50,22 +50,17 @@ public:
 		FEED_RGB, // our texture will contain a normal RGB texture that can be used directly
 	};
 
-	enum FeedPosition {
-		FEED_UNSPECIFIED, // we have no idea
-		FEED_FRONT, // this is a camera on the front of the device
-		FEED_BACK // this is a camera on the back of the device
-	};
-
 private:
 	int id; // unique id for this, for internal use in case feeds are removed
 	int base_width;
 	int base_height;
 
 protected:
+	Rect2i geometry; // window geometry
+	Vector2i position; // window absolute position
 	String wm_class; // WM_CLASS
 	String wm_name; // WM_NAME
 	FeedDataType datatype; // type of texture data stored
-	FeedPosition position; // position of camera on the device
 	Transform2D transform; // display transform
 
 	bool active; // only when active do we actually update the camera texture each frame
@@ -80,14 +75,16 @@ public:
 
 	String get_wm_class() const;
 	String get_wm_name() const;
+	Rect2i get_geom() const;
+	void set_geom(Rect2i);
 	void set_wm_class(String p_class);
 	void set_wm_name(String p_name);
 
 	int get_base_width() const;
 	int get_base_height() const;
 
-	FeedPosition get_position() const;
-	void set_position(FeedPosition p_position);
+	Vector2i get_position() const;
+	void set_position(Vector2i position);
 
 	Transform2D get_transform() const;
 	void set_transform(const Transform2D &p_transform);
@@ -95,7 +92,7 @@ public:
 	RID get_texture(CaptureServer::FeedImage p_which);
 
 	CaptureFeed();
-	CaptureFeed(String p_wm_name, String p_wm_class, FeedPosition p_position = CaptureFeed::FEED_UNSPECIFIED);
+	CaptureFeed(String p_wm_name, String p_wm_class);
 	virtual ~CaptureFeed();
 
 	FeedDataType get_datatype() const;
@@ -106,6 +103,5 @@ public:
 };
 
 VARIANT_ENUM_CAST(CaptureFeed::FeedDataType);
-VARIANT_ENUM_CAST(CaptureFeed::FeedPosition);
 
 #endif // CAPTURE_FEED_H

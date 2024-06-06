@@ -145,6 +145,8 @@ struct xcompcap {
 	bool window_changed;
 	bool window_hooked;
 
+	uint32_t x;
+	uint32_t y;
 	uint32_t width;
 	uint32_t height;
 	uint32_t border;
@@ -202,12 +204,26 @@ RID CaptureX11::feed_texture(int p_id, CaptureServer::FeedImage p_texture) {
 		return CaptureServer::feed_texture(p_id, p_texture);
 	}
 
+	xcb_translate_coordinates_cookie_t c = xcb_translate_coordinates(conn, p.win, geom->root, geom->x, geom->y);
+	xcb_translate_coordinates_reply_t* trans_coord = xcb_translate_coordinates_reply(conn, c, &err);
+	if (err != NULL) {
+		return CaptureServer::feed_texture(p_id, p_texture);
+	}
+
+
 	feed->params.border = p.include_border ? geom->border_width : 0;
 	feed->params.width = geom->width;
 	feed->params.height = geom->height;
 
+	feed->params.x = geom->x;
+	feed->params.y = geom->y;
+
 	Ref<Image> img;
   img.instantiate();
+
+	feed->set_geom(Rect2i(geom->x, geom->y, geom->width, geom->height));
+	feed->set_position(Vector2i(trans_coord->dst_x, trans_coord->dst_y));
+
 	Vector<uint8_t> img_data;
   img_data.resize(p.width * p.height * 4);
 	uint8_t *w = img_data.ptrw();

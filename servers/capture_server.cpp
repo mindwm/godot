@@ -108,7 +108,7 @@ void CaptureServer::add_feed(const Ref<CaptureFeed> &p_feed) {
 	// add our feed
 	feeds.push_back(p_feed);
 
-	print_verbose("CaptureServer: Registered capture " + p_feed->get_wm_name() + " with ID " + itos(p_feed->get_id()) + " and position " + itos(p_feed->get_position()) + " at index " + itos(feeds.size() - 1));
+	print_verbose("CaptureServer: Registered capture " + p_feed->get_wm_name() + " with ID " + itos(p_feed->get_id()) + " at index " + itos(feeds.size() - 1));
 
 	// let whomever is interested know
 	emit_signal(SNAME("capture_feed_added"), p_feed->get_id());
@@ -119,7 +119,7 @@ void CaptureServer::remove_feed(const Ref<CaptureFeed> &p_feed) {
 		if (feeds[i] == p_feed) {
 			int feed_id = p_feed->get_id();
 
-			print_verbose("CaptureServer: Removed capture " + p_feed->get_wm_name() + " with ID " + itos(feed_id) + " and position " + itos(p_feed->get_position()));
+			print_verbose("CaptureServer: Removed capture " + p_feed->get_wm_name() + " with ID " + itos(feed_id) );
 
 			// remove it from our array, if this results in our feed being unreferenced it will be destroyed
 			feeds.remove_at(i);
