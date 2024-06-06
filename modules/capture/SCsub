@@ -8,4 +8,4 @@ env_capture = env_modules.Clone()
 if env["platform"] == "linuxbsd":
     env_capture.add_source_files(env.modules_sources, "register_types.cpp")
     env_capture.add_source_files(env.modules_sources, "capture_x11.cpp")
-    env.Append(LIBS=['X11-xcb', 'xcb','xcb-xfixes', 'xcb-randr', 'xcb-shm', 'xcb-xinerama', 'xcb-composite', 'X11'])
+    env.Append(LIBS=['xcb-image', 'X11-xcb', 'xcb','xcb-xfixes', 'xcb-randr', 'xcb-shm', 'xcb-xinerama', 'xcb-composite', 'X11'])

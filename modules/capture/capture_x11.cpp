@@ -219,7 +219,7 @@ RID CaptureX11::feed_texture(int p_id, CaptureServer::FeedImage p_texture) {
 
 	if (image){
     memcpy(w, image->data, p.width * p.height * 4);
-		img->set_data(p.width, p.height, 0, Image::FORMAT_RGBA8, img_data);
+    img->set_data(p.width, p.height, 0, Image::FORMAT_RGBA8, img_data);
 		feed->set_RGB_img(img);
 	}
 	return CaptureServer::feed_texture(p_id, p_texture);
