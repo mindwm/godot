@@ -224,6 +224,9 @@ RID CaptureX11::feed_texture(int p_id, CaptureServer::FeedImage p_texture) {
 	feed->set_geom(Rect2i(geom->x, geom->y, geom->width, geom->height));
 	feed->set_position(Vector2i(trans_coord->dst_x, trans_coord->dst_y));
 
+	free(geom);
+	free(trans_coord);
+
 	Vector<uint8_t> img_data;
   img_data.resize(p.width * p.height * 4);
 	uint8_t *w = img_data.ptrw();
@@ -235,6 +238,7 @@ RID CaptureX11::feed_texture(int p_id, CaptureServer::FeedImage p_texture) {
 
 	if (image){
     memcpy(w, image->data, p.width * p.height * 4);
+		xcb_image_destroy(image);
     img->set_data(p.width, p.height, 0, Image::FORMAT_RGBA8, img_data);
 		feed->set_RGB_img(img);
 	}
@@ -268,7 +272,7 @@ void CaptureX11::add_active_windows() {
 				if (name) {
 					const char *data = (const char *)xcb_get_property_value(name);
 					String text;
-					text.parse_utf8((const char *)data, 1024);
+					text.parse_utf8(data, 1024);
 					print_line(vformat("buf: %s", text));
       		newfeed->set_wm_name(text);
 					newfeed->params.win = cwin;
